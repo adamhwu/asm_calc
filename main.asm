@@ -1,5 +1,6 @@
 ; main file for asm_calc, takes user input and stores to stack
-
+; postfix evaluation, plan to change later
+            
             .ORIG x3000
             
             LEA     R6, stackBase
