@@ -1,6 +1,6 @@
                 .ORIG x3000
 
-negOperation    ST      R0, nOpSave
+negOp           ST      R0, nOpSave
                 LEA     R0, nOpSave
                 STR     R7, R0, #7
                         
