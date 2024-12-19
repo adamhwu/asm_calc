@@ -52,11 +52,12 @@ NegMult     .FILL   xFFD6
 NegD        .FILL   xFFBC
 
 ; Globals
-stackMax    .BLKW #9
-stackBase   .BLKW #1
-ASCIIBUFF   .BLKW #4
+stackMax    .BLKW   #9
+stackBase   .BLKW   #1
+ASCIIBUFF   .BLKW   #4
             
-            .FILL  x0000    ; ASCIIBUFF sentinel
+            .FILL   x0000    ; ASCIIBUFF sentinel
+ASCIIPTR    .FILL   ASCIIBUFF
             
             .END
 
