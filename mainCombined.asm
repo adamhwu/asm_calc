@@ -1,5 +1,5 @@
 ; main program for asm_calc, takes user input and stores to stack
-; postfix evaluation, plan to change later
+; postfix evaluation, plan to expand to use prefix evaluation later
             
             .ORIG x3000
             
@@ -11,15 +11,11 @@ newPrompt   LEA     R0, inpMsg
 newInp      GETC
             OUT
             
-testX       LD      R1, NegX        ; check for X
-            ADD     R1, R1, R0
-            BRnp    testAdd
-            HALT
-            
 testAdd     LD      R1, NegPlus
             ADD     R1, R1, R0
             BRnp    testMinus
             JSR     addOp
+            JSR     BinarytoASCII
             BR      newInp
             
 testMinus   LD      R1, NegMinus
@@ -37,7 +33,7 @@ testMinus   LD      R1, NegMinus
 enterNum    JSR     ASCIIPush
             BR      newInp
 
-inpMsg      .STRINGZ "enter your command: "
+inpMsg      .STRINGZ "enter your commands: "
 
 NegX        .FILL   xFFA8
 NegC        .FILL   xFFBD
@@ -123,6 +119,91 @@ a_bASCIIOFFSET      .FILL   #-48
 a_bASCIIBUFF        .FILL   ASCIIBUFF       ; fill later with ASCIIBUFF
 
 a_bSave             .BLKW   #6
+
+
+BinarytoASCII       ST      R1, b_aSave     ; displays number at top of stack
+                    LEA     R1, b_aSave
+                    STR     R0, R1, #1
+                    STR     R2, R1, #2
+                    STR     R7, R1, #3
+                    
+                    LDR     R0, R6, #0
+                    
+                    ADD     R1, R0, #0          ; output negative sign if number is negative
+                    BRzp    b_aTenThousand
+                    LD      R0, ASCIINEG
+                    OUT
+                    
+b_aTenThousand      AND     R0, R0, #0          ; testing ten thousands digit
+                    LD      R2, negTenThousand
+b_aLoop1            ADD     R1, R1, R2
+                    BRn     thousand
+                    ADD     R0, R0, #1
+                    BR      b_aLoop1
+                    
+thousand            JSR     b_aDisp
+                    AND     R0, R0, #0
+                    LD      R2, negThousand
+b_aLoop2            ADD     R1, R1, R2
+                    BRn     hundred
+                    ADD     R0, R0, #1
+                    BR      b_aLoop2
+                    
+hundred             JSR     b_aDisp
+                    AND     R0, R0, #0
+                    LD      R2, negHundred
+b_aLoop3            ADD     R1, R1, R2
+                    BRn     ten
+                    ADD     R0, R0, #1
+                    BR      b_aLoop3
+                    
+ten                 JSR     b_aDisp
+                    AND     R0, R0, #0
+                    AND     R2, R2, #0
+                    ADD     R2, R2, #-10
+b_aLoop4            ADD     R1, R1, R2
+                    BRn     one
+                    ADD     R0, R0, #1
+                    BR      b_aLoop4
+                    
+one                 JSR     b_aDisp
+                    AND     R0, R0, #0
+                    ADD     R0, R1, #0
+                    JSR     b_aDisp
+                    
+                    BR      end
+                    
+b_aDisp             NOT     R2, R2              ; revert last addition, which resulted in a negative number
+                    ADD     R2, R2, #1
+                    ADD     R1, R1, R2
+                    LD      R2, isLeadingZero
+                    BRz     b_aDispSkip
+                    ADD     R0, R0, #0
+                    BRz     b_aDispDone
+b_aDispSkip         AND     R2, R2, #0
+                    ST      R2, isLeadingZero
+                    LD      R2, b_aASCIIOFFSET
+                    ADD     R0, R0, R2         ; displays current digit
+                    OUT     
+b_aDispDone         RET
+                    
+                    
+end                 LEA     R1, b_aSave
+                    LDR     R0, R1, #1
+                    LDR     R2, R1, #2
+                    LDR     R7, R1, #3
+                    LDR     R1, R1, #0
+                    RET
+    
+ASCIINEG            .FILL   x-002D
+b_aASCIIOFFSET      .FILL   #48
+isLeadingZero       .FILL   #1
+negTenThousand      .FILL   #-10000
+negThousand         .FILL   #-1000
+negHundred          .FILL   #-100
+
+                    
+b_aSave             .BLKW   #4
 
 ; addOp is a subroutine that pops top two values from stack, adds, them then pushes the result
 
