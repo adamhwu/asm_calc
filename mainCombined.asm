@@ -15,6 +15,9 @@ testAdd     LD      R1, NegPlus
             ADD     R1, R1, R0
             BRnp    testMinus
             JSR     addOp
+            JSR     testValid
+            LD      R0, LF
+            OUT
             JSR     BinarytoASCII
             BR      newInp
             
@@ -22,6 +25,10 @@ testMinus   LD      R1, NegMinus
             ADD     R1, R1, R0
             BRnp    enterNum
             JSR     negOp
+            JSR     testValid
+            LD      R0, LF
+            OUT
+            JSR     BinarytoASCII
             BR      newInp
             
 ;testD       LD      R1, NegD
@@ -32,8 +39,21 @@ testMinus   LD      R1, NegMinus
             
 enterNum    JSR     ASCIIPush
             BR      newInp
+            
+testValid   ADD     R5, R5, #0
+            BRp     badOutput
+            RET
+badOutput   LD      R0, LF
+            OUT
+            LEA     R0, badMsg
+            PUTS
+            LD      R0, LF
+            OUT
+            BR      newInp
+            
 
 inpMsg      .STRINGZ "enter your commands: "
+badMsg      .STRINGZ "invalid command"
 
 NegX        .FILL   xFFA8
 NegC        .FILL   xFFBD
@@ -41,6 +61,7 @@ NegPlus     .FILL   xFFD5
 NegMinus    .FILL   xFFD3
 NegMult     .FILL   xFFD6
 NegD        .FILL   xFFBC
+LF          .FILL   x0A
 
 ; Globals
 stackMax    .BLKW   #9
@@ -133,6 +154,8 @@ BinarytoASCII       ST      R1, b_aSave     ; displays number at top of stack
                     BRzp    b_aTenThousand
                     LD      R0, ASCIINEG
                     OUT
+                    NOT     R1, R1
+                    ADD     R1, R1, #1
                     
 b_aTenThousand      AND     R0, R0, #0          ; testing ten thousands digit
                     LD      R2, negTenThousand
@@ -195,7 +218,7 @@ end                 LEA     R1, b_aSave
                     LDR     R1, R1, #0
                     RET
     
-ASCIINEG            .FILL   x-002D
+ASCIINEG            .FILL   x2D
 b_aASCIIOFFSET      .FILL   #48
 isLeadingZero       .FILL   #1
 negTenThousand      .FILL   #-10000
@@ -211,6 +234,7 @@ addOp               ST      R0, aOpSave
                     LEA     R0, aOpSave
                     STR     R1, R0, #1
                     STR     R7, R0, #2
+                    STR     R6, R0, #3
         
                     JSR     POP
                     ADD     R5, R5, #0
@@ -227,7 +251,9 @@ addOp               ST      R0, aOpSave
                     BRz     aOpSuccess
             
             
-aOpFail             AND     R5, R5, #0
+aOpFail             LEA     R0, aOpSave
+                    LDR     R6, R0, #3
+                    AND     R5, R5, #0
                     ADD     R5, R5, #1
                     
 aOpSuccess          LEA     R0, aOpSave
@@ -236,11 +262,11 @@ aOpSuccess          LEA     R0, aOpSave
                     LDR     R0, R0, #0
                     RET 
             
-aOpSave             .BLKW #3
+aOpSave             .BLKW #4
 
 negOp               ST      R0, nOpSave
                     LEA     R0, nOpSave
-                    STR     R7, R0, #7
+                    STR     R7, R0, #1
                             
                     JSR     POP
                     ADD     R5, R5, #0
@@ -249,12 +275,13 @@ negOp               ST      R0, nOpSave
                     NOT     R0, R0
                     ADD     R0, R0, #1
                     JSR     PUSH
+                    BR      nOpSuccess
                     
 nOpFail             AND     R5, R5, #0
                     ADD     R5, R5, #1
         
-                    LEA     R0, nOpSave
-                    LDR     R7, R0, #7
+nOpSuccess          LEA     R0, nOpSave
+                    LDR     R7, R0, #1
                     LDR     R0, R0, #0
                     RET
                 
@@ -262,38 +289,43 @@ nOpSave             .BLKW #2
 
 ; pop and push subroutines
 
-POP                 AND R5, R5, #0
-                    ST  R1, Save1
-                    ST  R2, Save2
-                    LD  R1, EMPTY
-                    ADD R2, R6, R1
-                    BRz Failure
-                    LDR R0, R6, #0
-                    ADD R6, R6, #1
-                    BR  success
+POP                 AND     R5, R5, #0
+                    ST      R1, Save1
+                    ST      R2, Save2
+                    LD      R1, EMPTY  
+                    ADD     R1, R1, #1      ; convert R1 to neg of base + 1
+                    NOT     R1, R1
+                    ADD     R1, R1, #1
+                    ADD     R2, R6, R1
+                    BRz     Failure
+                    LDR     R0, R6, #0
+                    ADD     R6, R6, #1
+                    BR      success
         
 
-PUSH                AND R5, R5, #0
-                    ST  R1, Save1
-                    ST  R2, Save2
-                    LD  R1, MAX
-                    ADD R2, R6, R1
-                    BRz Failure
-                    ADD R6, R6, #-1
-                    STR R0, R6, #0
-                    BR  success
+PUSH                AND     R5, R5, #0
+                    ST      R1, Save1
+                    ST      R2, Save2
+                    LD      R1, MAX
+                    NOT     R1, R1
+                    ADD     R1, R1, #1
+                    ADD     R2, R6, R1
+                    BRz     Failure
+                    ADD     R6, R6, #-1
+                    STR     R0, R6, #0
+                    BR      success
         
-Failure             LD  R1, Save1
-                    LD  R2, Save2
-                    ADD R5, R5, #1
+Failure             LD      R1, Save1
+                    LD      R2, Save2
+                    ADD     R5, R5, #1
                     RET
         
-success             LD  R1, Save1
-                    LD  R2, Save2
+success             LD      R1, Save1
+                    LD      R2, Save2
                     RET
         
-EMPTY               .FILL xC000 ; EMPTY <-- -x4000
-MAX                 .FILL xC005 ; MAX <-- -x3FFB
+EMPTY               .FILL stackBase
+MAX                 .FILL stackMax ; Location of maximum of Stack
 Save1               .BLKW   #1
 Save2               .BLKW   #1
 
